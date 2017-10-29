@@ -1,4 +1,0 @@
-server = 173.230.128.213
-port = 6667
-nick = froziibot
-channels = #somechannel
