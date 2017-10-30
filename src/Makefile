@@ -1,13 +1,13 @@
 compile:
-	gcc froziibot.c -o froziibot
+	gcc octetbot.c -o octetbot
 
 run:
 	make compile
-	./froziibot
+	./octetbot
 
 clean:
-	rm froziibot
+	rm octetbot
 
 debug:
 	make compile
-	valgrind ./froziibot
+	valgrind ./octetbot

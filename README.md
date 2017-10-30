@@ -12,7 +12,7 @@ octetbot is an IRC bot im trying to work on in order to learn about sockets and 
 ### TODO
 ```text
 [X] Able to use very simple parsing on a config file
-[X] Can  connect to a server and a channel
+[X] Can connect to a server and a channel
 [X] Will stay in a channel without getting kicked by the server for being inactive
 [!] When provoked, is able to respond to the calling user
 ```
