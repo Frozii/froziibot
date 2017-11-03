@@ -1,10 +1,12 @@
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-int read_line(int socket, char *line);
+void read_line(int socket, char *line);
 char *read_operation(char *line);
 char *read_arguments(char *line);
 char *read_config(char *name);
@@ -16,7 +18,7 @@ void send_pong(int socket, char *arguments);
 
 int main()
 {
-      // creates a file descriptor that refers to the communication endpoint
+      // creates a file descriptor that refers to the communication endpoint, the socket being the endpoint of two-way communication.
       // 
       // AF_INET designates that we can communicate with IPv4 addresses from our socket
       // SOCK_STREAM provides reliable two-way communication
@@ -145,7 +147,7 @@ char* read_config(char *name)
                     // the first read is placed into config_key and the second read is placed into config_value
               	int status = fscanf(config_file, " %1023[^= ] = %s ", config_key, config_value);
 
-                    // if we hit End Of File
+                    // if we hit End-Of-File
                     if (status == EOF) {
 
                       // break out of the while loop
@@ -205,12 +207,12 @@ void join_channels(int socket, char *channels)
   send(socket, join_packet, strlen(join_packet), 0);
 }
 
-int read_line(int socket, char *line)
+void read_line(int socket, char *line)
 {
+  while (1) {
   // holds the length of the line
   int length = 0;
 
-  while (1) {
     // holds the current character in the line
     char data;
 
@@ -235,8 +237,8 @@ int read_line(int socket, char *line)
       // add null-terminator to the end of the string
       line[length - 2] = '\0';
 
-      // the function returns an integer because 
-      return length;
+      // break out of the while loop
+      break;
     }
   }
 }
@@ -253,16 +255,12 @@ char *read_operation(char *line)
   strncpy(copy, line, strlen(line) + 1);
 
   // strtok() will return a pointer to the beginning of a token
-  // if we encounter a " " inside of copy then the string is broken into smaller pieces
+  // if we encounter a ' ' inside of copy then the string is cut into a seperate piece from where the ' ' was found
   // something like "PING :some.server" would be broken into "PING"
-  // our token pointer would then point to the string "PING", also note that the " " after "PING" was replaced automatically with a null-terminator.
+  // our token pointer would then point to the string "PING", also note that the ' ' after "PING" was replaced automatically with a null-terminator.
   char *token = strtok(copy, " ");
 
   if (token != NULL) {
-    if (token[0] == ':') {
-      token = strtok(NULL, " ");
-    }
-
     if (token != NULL) {
       // copy the token and its null-terminator into the operation array
       strncpy(operation, token, strlen(token) + 1);
@@ -292,11 +290,11 @@ char *read_arguments(char *line)
   // copy contents of line into copy
   strncpy(copy, line, strlen(line) + 1);
 
-  // searches for the first appearance of " :" and returns a pointer to it
+  // searches for the first appearance of ' ' or ':' and returns a pointer to it
   char *token = strstr(copy, " :");
 
   if (token != NULL) {
-    // copy the characters starting from the right side of " :" to arguments
+    // copy the characters starting from the right side of ' ', ':' arguments
     strncpy(arguments, token + 2, strlen(token) + 1);
   }
 
