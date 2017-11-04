@@ -10,11 +10,13 @@ void read_line(int socket, char *line);
 char *read_operation(char *line);
 char *read_arguments(char *line);
 char *read_config(char *name);
+char *read_user(char *line);
 void send_nickname_packet(int socket, char *nickname);
 void send_username_packet(int socket, char *nickname);
 void join_channels(int socket, char *channels);
 void read_argumens(char *line);
 void send_pong(int socket, char *arguments);
+void send_greeting(int socket, char *user);
 
 int main()
 {
@@ -91,6 +93,7 @@ int main()
         // read the current text line into the array
         read_line(socket_descriptor, line);
 
+        char *user = read_user(line);
         char *operation = read_operation(line);
         char *arguments = read_arguments(line);
 
@@ -99,6 +102,17 @@ int main()
         if (strcmp(operation, "PING") == 0) {
           send_pong(socket_descriptor, arguments);
         }
+
+        else if (strcmp(operation, "JOIN") == 0) {
+          send_greeting(socket_descriptor, user);
+        }
+
+        else if (strcmp(operation, "PART") == 0) {
+          //send_goodbye();
+        }
+
+        // free malloc'd pointer
+        free(user);
 
         // free malloc'd pointer
         free(operation);
@@ -120,9 +134,8 @@ char* read_config(char *name)
 	FILE *config_file = fopen("config.txt", "r");
 
 	// if the file pointer is pointing to a valid location
-	if (config_file != NULL) {
+	if (config_file) {
 		while (1) {
-
 			// char array to hold the configuration key string
 			char config_key[512];
 
@@ -165,7 +178,7 @@ char* read_config(char *name)
               // close the open file
                fclose(config_file);
 	}
-        return value;
+      return value;
 }
 
 void send_nickname_packet(int socket, char *nickname)
@@ -209,10 +222,10 @@ void join_channels(int socket, char *channels)
 
 void read_line(int socket, char *line)
 {
-  while (1) {
   // holds the length of the line
   int length = 0;
-
+  
+  while (1) {
     // holds the current character in the line
     char data;
 
@@ -237,6 +250,8 @@ void read_line(int socket, char *line)
       // add null-terminator to the end of the string
       line[length - 2] = '\0';
 
+      //return length;
+
       // break out of the while loop
       break;
     }
@@ -248,34 +263,51 @@ char *read_operation(char *line)
   // char array to hold the operation
   char *operation = malloc(512);
 
-  // char array to be used as a duplicate, we need a duplicate because strtok() breaks the string
+  // char array to be used as a duplicate
   char copy[512];
 
   // copy contents of line into copy
   strncpy(copy, line, strlen(line) + 1);
 
-  // strtok() will return a pointer to the beginning of a token
-  // if we encounter a ' ' inside of copy then the string is cut into a seperate piece from where the ' ' was found
-  // something like "PING :some.server" would be broken into "PING"
-  // our token pointer would then point to the string "PING", also note that the ' ' after "PING" was replaced automatically with a null-terminator.
-  char *token = strtok(copy, " ");
+  // a pointer which will hold the start of a substring found by strstr()
+  char *start;
 
-  if (token != NULL) {
-    if (token != NULL) {
-      // copy the token and its null-terminator into the operation array
-      strncpy(operation, token, strlen(token) + 1);
-    }
+  if (start = strstr(copy, "PING")) {
+    sprintf(operation, "PING");
+  }
 
-    else {
-      // add the null-terminator to the empty string
-      operation[0] = '\0';
-    }
+  else if (start = strstr(copy, "JOIN")) {
+    sprintf(operation, "JOIN");
+  }
+
+  else if (start = strstr(copy, "MODE")) {
+    sprintf(operation, "MODE");
+  }
+
+  else if (start = strstr(copy, "KICK")) {
+    sprintf(operation, "KICK");
+  }
+
+  else if (start = strstr(copy, "PART")) {
+    sprintf(operation, "PART");
+  }
+
+  else if (start = strstr(copy, "QUIT")) {
+    sprintf(operation, "QUIT");
+  }
+
+  else if (start = strstr(copy, "PRIVMSG")) {
+    sprintf(operation, "PRIVMSG");
+  }
+
+  else if (start = strstr(copy, "NOTICE")) {
+    sprintf(operation, "NOTICE");
   }
 
   else {
-    // add the null-terminator to the empty string
     operation[0] = '\0';
   }
+
   return operation;
 }
 
@@ -293,7 +325,7 @@ char *read_arguments(char *line)
   // searches for the first appearance of ' ' or ':' and returns a pointer to it
   char *token = strstr(copy, " :");
 
-  if (token != NULL) {
+  if (token) {
     // copy the characters starting from the right side of ' ', ':' arguments
     strncpy(arguments, token + 2, strlen(token) + 1);
   }
@@ -302,7 +334,29 @@ char *read_arguments(char *line)
     // add the null-terminator to the empty string
     arguments[0] = '\0';
   }
+
   return arguments;
+}
+
+char *read_user(char *line)
+{
+  char *user = malloc(512);
+
+  char copy[512];
+
+  strncpy(copy, line, strlen(line) + 1);
+
+  char *token = strtok(copy, "!");
+
+  if (token) {
+    strncpy(user, token + 1, strlen(token) + 1);
+  }
+
+  else {
+    user[0] = '\0';
+  }
+
+  return user;
 }
 
 void send_pong(int socket, char *arguments)
@@ -317,4 +371,16 @@ void send_pong(int socket, char *arguments)
 
   // transmit our char array through the socket to the server
   send(socket, pong_packet, sizeof(pong_packet), 0);
+}
+
+void send_greeting(int socket, char *user)
+{
+
+  printf("Welcome %s!\n", user);
+
+  char greeting_packet[512];
+
+  sprintf(greeting_packet, ":octetbot!~octetbot@dsl-trebng11-54f915-160.dhcp.inet.fi PRIVMSG %s :Hey %s...\r\n", user, user);
+
+  send(socket, greeting_packet, sizeof(greeting_packet), 0);
 }
