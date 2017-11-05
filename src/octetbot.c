@@ -109,6 +109,7 @@ int main()
 
           send_greeting(socket_descriptor, user, channel);
 
+          // free malloc'd pointer
           free(channel);
         }
 
@@ -117,6 +118,7 @@ int main()
 
           send_goodbye(socket_descriptor, user, channel);
 
+          // free malloc'd pointer
           free(channel);
         }
 
@@ -124,11 +126,14 @@ int main()
           char *channel = read_config("channels");
           char *message_text = get_text_argument(line);
 
-            if (strcmp(message_text, "!octetbot") == 0) {
-              reply_invoked(socket_descriptor, user, channel);
-            }
+          if (strcmp(message_text, "!octetbot") == 0) {
+            reply_invoked(socket_descriptor, user, channel);
+          }
 
+          // free malloc'd pointer
           free(channel);
+          
+          // free malloc'd pointer
           free(message_text);
         }
 
