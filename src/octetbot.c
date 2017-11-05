@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +7,7 @@
 void read_line(int socket, char *line);
 char *read_operation(char *line);
 char *read_arguments(char *line);
+char *get_text_argument(char *line);
 char *read_config(char *name);
 char *read_user(char *line);
 void send_nickname_packet(int socket, char *nickname);
@@ -16,7 +15,9 @@ void send_username_packet(int socket, char *nickname);
 void join_channels(int socket, char *channels);
 void read_argumens(char *line);
 void send_pong(int socket, char *arguments);
-void send_greeting(int socket, char *user);
+void send_greeting(int socket, char *user, char *channel);
+void send_goodbye(int socket, char *user, char *channel);
+void reply_invoked(int socket, char *user, char *channel);
 
 int main()
 {
@@ -25,16 +26,16 @@ int main()
       // AF_INET designates that we can communicate with IPv4 addresses from our socket
       // SOCK_STREAM provides reliable two-way communication
       // 0 specifies that we are using the Transmission Control Protocol
-	int socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+  int socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
 
-	// error handling
-	if (socket_descriptor == -1) {
-		perror("Failed to create socket");
-		exit(EXIT_FAILURE);
-	}
+  // error handling
+  if (socket_descriptor == -1) {
+    perror("Failed to create socket");
+    exit(EXIT_FAILURE);
+  }
 
-	char *ip = read_config("server");
-	char *port = read_config("port");
+  char *ip = read_config("server");
+  char *port = read_config("port");
 
       // structure for handling internet addresses which we will refer to as server
       struct sockaddr_in server;
@@ -104,11 +105,31 @@ int main()
         }
 
         else if (strcmp(operation, "JOIN") == 0) {
-          send_greeting(socket_descriptor, user);
+          char *channel = read_config("channels");
+
+          send_greeting(socket_descriptor, user, channel);
+
+          free(channel);
         }
 
         else if (strcmp(operation, "PART") == 0) {
-          //send_goodbye();
+          char *channel = read_config("channels");
+
+          send_goodbye(socket_descriptor, user, channel);
+
+          free(channel);
+        }
+
+        else if (strcmp(operation, "PRIVMSG") == 0) {
+          char *channel = read_config("channels");
+          char *message_text = get_text_argument(line);
+
+            if (strcmp(message_text, "!octetbot") == 0) {
+              reply_invoked(socket_descriptor, user, channel);
+            }
+
+          free(channel);
+          free(message_text);
         }
 
         // free malloc'd pointer
@@ -124,23 +145,23 @@ int main()
 
 char* read_config(char *name)
 {
-	// create a char pointer and allocate 512 bytes to it
-	char *value = malloc(512);
+  // create a char pointer and allocate 512 bytes to it
+  char *value = malloc(512);
 
-	// add the null-terminator to the first element of the array, if the file pointer is NULL we will return a null-terminated string
-	value[0] = '\0';
+  // add the null-terminator to the first element of the array, if the file pointer is NULL we will return a null-terminated string
+  value[0] = '\0';
 
-	// create a file pointer and point it to the start of the config file, open the file with read permissions
-	FILE *config_file = fopen("config.txt", "r");
+  // create a file pointer and point it to the start of the config file, open the file with read permissions
+  FILE *config_file = fopen("config.txt", "r");
 
-	// if the file pointer is pointing to a valid location
-	if (config_file) {
-		while (1) {
-			// char array to hold the configuration key string
-			char config_key[512];
+  // if the file pointer is pointing to a valid location
+  if (config_file) {
+    while (1) {
+      // char array to hold the configuration key string
+      char config_key[512];
 
-			// char array to hold the configuration value
-			char config_value[512];
+      // char array to hold the configuration value
+      char config_value[512];
 
                     // parse the Key = Value pairs
                     // 
@@ -158,7 +179,7 @@ char* read_config(char *name)
                     //                  ^ optionally skip whitespace
                     //                
                     // the first read is placed into config_key and the second read is placed into config_value
-              	int status = fscanf(config_file, " %1023[^= ] = %s ", config_key, config_value);
+                int status = fscanf(config_file, " %1023[^= ] = %s ", config_key, config_value);
 
                     // if we hit End-Of-File
                     if (status == EOF) {
@@ -174,10 +195,10 @@ char* read_config(char *name)
                       strncpy(value, config_value, strlen(config_value) + 1);
                       break;
                     }
-		}
+    }
               // close the open file
                fclose(config_file);
-	}
+  }
       return value;
 }
 
@@ -288,7 +309,7 @@ char *read_operation(char *line)
     sprintf(operation, "KICK");
   }
 
-  else if (start = strstr(copy, "PART")) {
+  else if ((start = strstr(copy, "PART")) || (start = strstr(copy, "CLOSE"))) {
     sprintf(operation, "PART");
   }
 
@@ -338,21 +359,57 @@ char *read_arguments(char *line)
   return arguments;
 }
 
-char *read_user(char *line)
+char *get_text_argument(char *line)
 {
-  char *user = malloc(512);
+  // char array to hold the text arguments
+  char *arguments = malloc(512);
 
+  // char array to be used as a duplicate, we need a duplicate because strtok() breaks the string
   char copy[512];
 
+  // copy contents of line into copy
+  strncpy(copy, line, strlen(line) + 1);
+
+  char *token = strstr(copy, ":");
+
+  int iteration = 0;
+
+  while (token) {
+      if (iteration >= 2) {
+        strncpy(arguments, token, strlen(token) + 1);
+
+        break;
+      }
+
+      token = strtok(NULL, ":");
+
+      // increment the iteration counter
+      iteration++;
+  }
+
+  return arguments;
+}
+
+char *read_user(char *line)
+{
+  // char array to hold the user
+  char *user = malloc(512);
+
+  // char array to be used as a duplicate, we need a duplicate because strtok() breaks the string
+  char copy[512];
+
+  // copy contents of line into copy
   strncpy(copy, line, strlen(line) + 1);
 
   char *token = strtok(copy, "!");
 
   if (token) {
+    // copy the characters starting from the start of the string with an offset of 1 byte
     strncpy(user, token + 1, strlen(token) + 1);
   }
 
   else {
+    // add the null-terminator to the empty string
     user[0] = '\0';
   }
 
@@ -370,17 +427,38 @@ void send_pong(int socket, char *arguments)
   sprintf(pong_packet, "PONG %s\r\n", arguments);
 
   // transmit our char array through the socket to the server
-  send(socket, pong_packet, sizeof(pong_packet), 0);
+  send(socket, pong_packet, strlen(pong_packet), 0);
 }
 
-void send_greeting(int socket, char *user)
+void send_greeting(int socket, char *user, char *channel)
 {
-
-  printf("Welcome %s!\n", user);
-
+  // char array which will hold the greeting message
   char greeting_packet[512];
 
-  sprintf(greeting_packet, ":octetbot!~octetbot@dsl-trebng11-54f915-160.dhcp.inet.fi PRIVMSG %s :Hey %s...\r\n", user, user);
+  sprintf(greeting_packet, "PRIVMSG %s :%s has joined.\r\n", channel, user);
 
-  send(socket, greeting_packet, sizeof(greeting_packet), 0);
+  // transmit our char array through the socket to the server
+  send(socket, greeting_packet, strlen(greeting_packet), 0);
+}
+
+void send_goodbye(int socket, char *user, char *channel)
+{
+  // char array which will hold the goodbye message
+  char goodbye_packet[512];
+
+  sprintf(goodbye_packet, "PRIVMSG %s :%s has left.\r\n", channel, user);
+
+  // transmit our char array through the socket to the server
+  send(socket, goodbye_packet, strlen(goodbye_packet), 0);
+}
+
+void reply_invoked(int socket, char *user, char *channel)
+{
+  // char array which will hold the respond message
+  char invoked_reply[512];
+
+  sprintf(invoked_reply, "PRIVMSG %s :!%s\r\n", channel, user);
+
+  // transmit our char array through the socket to the server
+  send(socket, invoked_reply, strlen(invoked_reply), 0);
 }
