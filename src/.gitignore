@@ -1,1 +1,8 @@
-./octetbot
+# Ignore everything
+*
+
+# Unignore everything with an extension
+!*.*
+
+# Unignore every directory
+!*/
