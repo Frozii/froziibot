@@ -6,3 +6,6 @@
 
 # Unignore every directory
 !*/
+
+# Ignore octetbot.log
+octetbot.log

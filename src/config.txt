@@ -1,4 +1,4 @@
 server = 173.230.128.213
 port = 6667
 nick = octetbot
-channels = ##oodnet
+channels = ##somechannel
