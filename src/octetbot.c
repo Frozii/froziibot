@@ -4,150 +4,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-void read_line(int socket, char *line);
-char *read_operation(char *line);
-char *read_arguments(char *line);
-char *get_text_argument(char *line);
-char *read_config(char *name);
-char *read_user(char *line);
-void send_nickname_packet(int socket, char *nickname);
-void send_username_packet(int socket, char *nickname);
-void join_channels(int socket, char *channels);
-void read_argumens(char *line);
-void send_pong(int socket, char *arguments);
-void send_greeting(int socket, char *user, char *channel);
-void send_goodbye(int socket, char *user, char *channel);
-void reply_invoked(int socket, char *user, char *channel);
-
-int main()
-{
-      // creates a file descriptor that refers to the communication endpoint, the socket being the endpoint of two-way communication.
-      // 
-      // AF_INET designates that we can communicate with IPv4 addresses from our socket
-      // SOCK_STREAM provides reliable two-way communication
-      // 0 specifies that we are using the Transmission Control Protocol
-  int socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
-
-  // error handling
-  if (socket_descriptor == -1) {
-    perror("Failed to create socket");
-    exit(EXIT_FAILURE);
-  }
-
-  char *ip = read_config("server");
-  char *port = read_config("port");
-
-      // structure for handling internet addresses which we will refer to as server
-      struct sockaddr_in server;
-
-      // set the address family
-      server.sin_family = AF_INET;
-
-      // set the port
-      // 
-      // htons() makes sure our port value is stored in memory in network byte order
-      // atoi() turns our port from a string to an integer
-      server.sin_port = htons(atoi(port));
-
-      // set the internet address
-      // 
-      // inet_addr() will turn our string *ip* to an integer value for use as an internet address
-      server.sin_addr.s_addr = inet_addr(ip);
-
-      printf("The IP is: %s\n", ip);
-      printf("The port is: %s\n", port);
-
-      // free malloc'd pointer
-      free(ip);
-
-      // free malloc'd pointer
-      free(port);
-
-      // connect our socket to a remote server
-      // 
-      // in order to connect we need to give it our socket descriptor, the location of our server which has been typecasted and the size of it.
-      if (connect(socket_descriptor, (struct sockaddr*)&server, sizeof(server)) == -1) {
-        perror("Failed to connect");
-        exit(EXIT_FAILURE);
-      }
-
-      char *nick = read_config("nick");
-      char *channels = read_config("channels");
-
-      printf("The nick is: %s\n", nick);
-      printf("Our channels are: %s\n", channels);
-
-      send_nickname_packet(socket_descriptor, nick);
-      send_username_packet(socket_descriptor, nick);
-      join_channels(socket_descriptor, channels);
-
-      // free malloc'd pointer
-      free(nick);
-
-      // free malloc'd pointer
-      free(channels);
-
-      while (1) {
-        // char array to hold the current text line
-        char line[512];
-
-        // read the current text line into the array
-        read_line(socket_descriptor, line);
-
-        char *user = read_user(line);
-        char *operation = read_operation(line);
-        char *arguments = read_arguments(line);
-
-        printf("%s\n", line);
-
-        if (strcmp(operation, "PING") == 0) {
-          send_pong(socket_descriptor, arguments);
-        }
-
-        else if (strcmp(operation, "JOIN") == 0) {
-          char *channel = read_config("channels");
-
-          send_greeting(socket_descriptor, user, channel);
-
-          // free malloc'd pointer
-          free(channel);
-        }
-
-        else if (strcmp(operation, "PART") == 0) {
-          char *channel = read_config("channels");
-
-          send_goodbye(socket_descriptor, user, channel);
-
-          // free malloc'd pointer
-          free(channel);
-        }
-
-        else if (strcmp(operation, "PRIVMSG") == 0) {
-          char *channel = read_config("channels");
-          char *message_text = get_text_argument(line);
-
-          if (strcmp(message_text, "!octetbot") == 0) {
-            reply_invoked(socket_descriptor, user, channel);
-          }
-
-          // free malloc'd pointer
-          free(channel);
-          
-          // free malloc'd pointer
-          free(message_text);
-        }
-
-        // free malloc'd pointer
-        free(user);
-
-        // free malloc'd pointer
-        free(operation);
-
-        // free malloc'd pointer
-        free(arguments);
-      }
-}
-
 char* read_config(char *name)
 {
   // create a char pointer and allocate 512 bytes to it
@@ -466,4 +322,133 @@ void reply_invoked(int socket, char *user, char *channel)
 
   // transmit our char array through the socket to the server
   send(socket, invoked_reply, strlen(invoked_reply), 0);
+}
+
+int main()
+{
+      // creates a file descriptor that refers to the communication endpoint, the socket being the endpoint of two-way communication.
+      // 
+      // AF_INET designates that we can communicate with IPv4 addresses from our socket
+      // SOCK_STREAM provides reliable two-way communication
+      // 0 specifies that we are using the Transmission Control Protocol
+  int socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
+
+  // error handling
+  if (socket_descriptor == -1) {
+    perror("Failed to create socket");
+    exit(EXIT_FAILURE);
+  }
+
+  char *ip = read_config("server");
+  char *port = read_config("port");
+
+      // structure for handling internet addresses which we will refer to as server
+      struct sockaddr_in server;
+
+      // set the address family
+      server.sin_family = AF_INET;
+
+      // set the port
+      // 
+      // htons() makes sure our port value is stored in memory in network byte order
+      // atoi() turns our port from a string to an integer
+      server.sin_port = htons(atoi(port));
+
+      // set the internet address
+      // 
+      // inet_addr() will turn our string *ip* to an integer value for use as an internet address
+      server.sin_addr.s_addr = inet_addr(ip);
+
+      printf("The IP is: %s\n", ip);
+      printf("The port is: %s\n", port);
+
+      // free malloc'd pointer
+      free(ip);
+
+      // free malloc'd pointer
+      free(port);
+
+      // connect our socket to a remote server
+      // 
+      // in order to connect we need to give it our socket descriptor, the location of our server which has been typecasted and the size of it.
+      if (connect(socket_descriptor, (struct sockaddr*)&server, sizeof(server)) == -1) {
+        perror("Failed to connect");
+        exit(EXIT_FAILURE);
+      }
+
+      char *nick = read_config("nick");
+      char *channels = read_config("channels");
+
+      printf("The nick is: %s\n", nick);
+      printf("Our channels are: %s\n", channels);
+
+      send_nickname_packet(socket_descriptor, nick);
+      send_username_packet(socket_descriptor, nick);
+      join_channels(socket_descriptor, channels);
+
+      // free malloc'd pointer
+      free(nick);
+
+      // free malloc'd pointer
+      free(channels);
+
+      while (1) {
+        // char array to hold the current text line
+        char line[512];
+
+        // read the current text line into the array
+        read_line(socket_descriptor, line);
+
+        char *user = read_user(line);
+        char *operation = read_operation(line);
+        char *arguments = read_arguments(line);
+
+        printf("%s\n", line);
+
+        if (strcmp(operation, "PING") == 0) {
+          send_pong(socket_descriptor, arguments);
+        }
+
+        else if (strcmp(operation, "JOIN") == 0) {
+          char *channel = read_config("channels");
+
+          send_greeting(socket_descriptor, user, channel);
+
+          // free malloc'd pointer
+          free(channel);
+        }
+
+        else if (strcmp(operation, "PART") == 0) {
+          char *channel = read_config("channels");
+
+          send_goodbye(socket_descriptor, user, channel);
+
+          // free malloc'd pointer
+          free(channel);
+        }
+
+        else if (strcmp(operation, "PRIVMSG") == 0) {
+          char *channel = read_config("channels");
+          char *message_text = get_text_argument(line);
+
+          if (strcmp(message_text, "!octetbot") == 0) {
+            reply_invoked(socket_descriptor, user, channel);
+          }
+
+          // free malloc'd pointer
+          free(channel);
+          
+          // free malloc'd pointer
+          free(message_text);
+        }
+
+        // free malloc'd pointer
+        free(user);
+
+        // free malloc'd pointer
+        free(operation);
+
+        // free malloc'd pointer
+        free(arguments);
+      }
 }

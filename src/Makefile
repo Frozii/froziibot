@@ -7,7 +7,3 @@ run:
 
 clean:
 	rm octetbot
-
-debug:
-	make compile
-	valgrind ./octetbot
