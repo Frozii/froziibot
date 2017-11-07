@@ -421,7 +421,7 @@ int main()
     
     while (1) {
         // create a pointer to the log file
-        FILE *log_file = fopen("octetbot.log", "a+");
+        FILE *log_file = fopen("octetbot_log", "a+");
         
         // char array to hold the current text line
         char line[512];
