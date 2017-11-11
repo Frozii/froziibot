@@ -7,4 +7,4 @@ run:
 
 clean:
 	rm octetbot
-	rm octetbot_log
+	rm octetbot.log

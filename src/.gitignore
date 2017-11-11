@@ -1,11 +1,2 @@
-# Ignore everything
-*
-
-# Unignore everything with an extension
-!*.*
-
-# Unignore every directory
-!*/
-
-# Ignore octetbot.log
-octetbot.log
+octetbot
+*.log

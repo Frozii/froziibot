@@ -14,7 +14,7 @@ char* read_config(char *name)
     value[0] = '\0';
 
     // create a file pointer and point it to the start of the config file, open the file with read permissions
-    FILE *config_file = fopen("config.txt", "r");
+    FILE *config_file = fopen("config", "r");
 
     // if the file pointer is pointing to a valid location
     if (config_file) {
@@ -30,9 +30,9 @@ char* read_config(char *name)
             // fscanf will on success return the amount of arguments it assigned
             // in our case it returns 2 because we assigned config_key and config_value
             // 
-            // " %1023[^= ] = %s "
+            // " %511[^= ] = %s "
             //  ^================ optionally skip whitespace
-            //   ^^^^^=========== read a string of at most 1023 letters
+            //   ^^^^^=========== read a string of at most 511 letters
             //        ^^^^^====== [] is a set, [^= ] means that the string we read cannot contain the characters inside of the set, which means our string cannot contain a '=' or a ' '
             //             ^===== optionally skip whitespace
             //              ^==== read a literal '='
@@ -41,7 +41,7 @@ char* read_config(char *name)
             //                  ^ optionally skip whitespace
             //                
             // the first read is placed into config_key and the second read is placed into config_value
-            int status = fscanf(config_file, " %1023[^= ] = %s ", config_key, config_value);
+            int status = fscanf(config_file, " %511[^= ] = %s ", config_key, config_value);
 
             // if we hit End-Of-File
             if (status == EOF) {
@@ -320,7 +320,7 @@ void reply_invoked(int socket, char *user, char *channel)
     // char array which will hold the respond message
     char invoked_reply[512];
 
-    sprintf(invoked_reply, "PRIVMSG %s :!%s\r\n", channel, user);
+    sprintf(invoked_reply, "PRIVMSG %s :%s\r\n", channel, user);
 
     // transmit our char array through the socket to the server
     send(socket, invoked_reply, strlen(invoked_reply), 0);
@@ -421,7 +421,7 @@ int main()
     
     while (1) {
         // create a pointer to the log file
-        FILE *log_file = fopen("octetbot_log", "a+");
+        FILE *log_file = fopen("octetbot.log", "a+");
         
         // char array to hold the current text line
         char line[512];
@@ -441,12 +441,12 @@ int main()
             char *message_text = "Got PING, Sending PONG.";
             
             send_pong(socket_descriptor, arguments);
-            log_it(channel, "", message_text, log_file);
+            log_it(channel, "!", message_text, log_file);
         }
 
         else if (strcmp(operation, "JOIN") == 0) {
             char *channel = read_config("channels");
-            char *message_text = "Has joined.";
+            char *message_text = "has joined.";
             
             send_greeting(socket_descriptor, user, channel);
             log_it(channel, user, message_text, log_file);
@@ -454,7 +454,7 @@ int main()
 
         else if (strcmp(operation, "PART") == 0) {
             char *channel = read_config("channels");
-            char *message_text = "Has left.";
+            char *message_text = "has left.";
 
             send_goodbye(socket_descriptor, user, channel);
             log_it(channel, user, message_text, log_file);
@@ -464,11 +464,18 @@ int main()
             char *channel = read_config("channels");
             char *message_text = get_text_argument(line);
 
-            if (strcmp(message_text, "!octetbot") == 0) {
-                reply_invoked(socket_descriptor, user, channel);
-            }
+            // add : to the start of messages, makes it a little easier to read the log file
+            char *new_message_text = malloc(512);
+            sprintf(new_message_text, ":%s", message_text);
             
-            log_it(channel, user, message_text, log_file);
+            if (strcmp(message_text, "!octetbot") == 0) {
+                reply_invoked(socket_descriptor, user, channel); 
+           }
+            
+            log_it(channel, user, new_message_text, log_file);
+
+            // free malloc'd pointer
+            free(new_message_text);
         }
 
         // free malloc'd pointer
