@@ -326,7 +326,7 @@ void reply_invoked(int socket, char *user, char *channel)
     send(socket, invoked_reply, strlen(invoked_reply), 0);
 }
 
-void log_it(char line[], FILE *log_file)
+void log_it(char *channel, char *user, char *message_text, FILE *log_file)
 {
     // array to store our date string into
     char current_date[50];
@@ -345,7 +345,7 @@ void log_it(char line[], FILE *log_file)
     strftime(current_date, sizeof(current_date), "%Y-%m-%d %H:%M:%S", current_time);
     
     // prints our time and message into the log file
-    fprintf(log_file, "[%s] %s\n", current_date, line);
+    fprintf(log_file, "[%s %s] %s %s\n", current_date, channel, user, message_text);
 
     // close the log file
     fclose(log_file);
@@ -437,26 +437,27 @@ int main()
         printf("%s\n", line);
 
         if (strcmp(operation, "PING") == 0) {
+            char *channel = read_config("channels");
+            char *message_text = "Got PING, Sending PONG.";
+            
             send_pong(socket_descriptor, arguments);
-            log_it("Got PING, Sending PONG.", log_file);
+            log_it(channel, "", message_text, log_file);
         }
 
         else if (strcmp(operation, "JOIN") == 0) {
             char *channel = read_config("channels");
-
+            char *message_text = "Has joined.";
+            
             send_greeting(socket_descriptor, user, channel);
-
-            // free malloc'd pointer
-            free(channel);
+            log_it(channel, user, message_text, log_file);
         }
 
         else if (strcmp(operation, "PART") == 0) {
             char *channel = read_config("channels");
+            char *message_text = "Has left.";
 
             send_goodbye(socket_descriptor, user, channel);
-
-            // free malloc'd pointer
-            free(channel);
+            log_it(channel, user, message_text, log_file);
         }
 
         else if (strcmp(operation, "PRIVMSG") == 0) {
@@ -466,12 +467,8 @@ int main()
             if (strcmp(message_text, "!octetbot") == 0) {
                 reply_invoked(socket_descriptor, user, channel);
             }
-
-            // free malloc'd pointer
-            free(channel);
-          
-            // free malloc'd pointer
-            free(message_text);
+            
+            log_it(channel, user, message_text, log_file);
         }
 
         // free malloc'd pointer
