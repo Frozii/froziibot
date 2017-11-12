@@ -91,13 +91,13 @@ void send_username_packet(int socket, char *nickname)
     send(socket, username_packet, strlen(username_packet), 0);
 }
 
-void join_channels(int socket, char *channels)
+void join_channel(int socket, char *channel)
 {
     // char array which we will send to the server
     char join_packet[512];
 
     // JOIN command is used by a user to request to start listening to the specific channel(s)
-    sprintf(join_packet, "JOIN %s\r\n", channels);
+    sprintf(join_packet, "JOIN %s\r\n", channel);
 
     // transmit our char array through the socket to the server
     send(socket, join_packet, strlen(join_packet), 0);
@@ -386,9 +386,6 @@ int main()
     // inet_addr() will turn our string *ip* to an integer value for use as an internet address
     server.sin_addr.s_addr = inet_addr(ip);
 
-    printf("The IP is: %s\n", ip);
-    printf("The port is: %s\n", port);
-
     // free malloc'd pointer
     free(ip);
 
@@ -404,20 +401,17 @@ int main()
     }
 
     char *nick = read_config("nick");
-    char *channels = read_config("channels");
-
-    printf("The nick is: %s\n", nick);
-    printf("Our channels are: %s\n", channels);
+    char *channel = read_config("channel");
 
     send_nickname_packet(socket_descriptor, nick);
     send_username_packet(socket_descriptor, nick);
-    join_channels(socket_descriptor, channels);
+    join_channel(socket_descriptor, channel);
 
     // free malloc'd pointer
     free(nick);
 
     // free malloc'd pointer
-    free(channels);
+    free(channel);
     
     while (1) {
         // create a pointer to the log file
@@ -437,7 +431,7 @@ int main()
         printf("%s\n", line);
 
         if (strcmp(operation, "PING") == 0) {
-            char *channel = read_config("channels");
+            char *channel = read_config("channel");
             char *message_text = "Got PING, Sending PONG.";
             
             send_pong(socket_descriptor, arguments);
@@ -445,7 +439,7 @@ int main()
         }
 
         else if (strcmp(operation, "JOIN") == 0) {
-            char *channel = read_config("channels");
+            char *channel = read_config("channel");
             char *message_text = "has joined.";
             
             send_greeting(socket_descriptor, user, channel);
@@ -453,7 +447,7 @@ int main()
         }
 
         else if (strcmp(operation, "PART") == 0) {
-            char *channel = read_config("channels");
+            char *channel = read_config("channel");
             char *message_text = "has left.";
 
             send_goodbye(socket_descriptor, user, channel);
@@ -461,7 +455,7 @@ int main()
         }
 
         else if (strcmp(operation, "PRIVMSG") == 0) {
-            char *channel = read_config("channels");
+            char *channel = read_config("channel");
             char *message_text = get_text_argument(line);
 
             // add : to the start of messages, makes it a little easier to read the log file

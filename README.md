@@ -13,7 +13,7 @@ it's very small and can only do simple things for now.
 
 ### TODO
 ```text
-[!] Find a solution for cleaner log file output
+[X] Find a solution for cleaner log file output
 [] Think about more complex tasks for the bot, .tell, .lastseen etc.
 ```
 
