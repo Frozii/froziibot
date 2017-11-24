@@ -464,8 +464,15 @@ int main()
             
             if (strcmp(message_text, "!octetbot") == 0) {
                 reply_invoked(socket_descriptor, user, channel); 
-           }
+            }
             
+            // The above method compares against the whole string after ':'
+            // if we're going to have a .tell command it's going to be something like
+            // !tell frozii check this out!
+            // so we need to see if !tell is found in the message, we can't just compare
+            // against the whole string because it has the user we want to contact
+            // and the message we want to leave them.
+
             log_it(channel, user, new_message_text, log_file);
 
             // free malloc'd pointer
